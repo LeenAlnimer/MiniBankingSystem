@@ -33,7 +33,8 @@ public class AccountController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<AccountDto>> GetAccountById(Guid id)
+    public async Task<ActionResult<AccountDto>> GetAccountById(
+        Guid id)
     {
         var account = await _accountService.GetAccountByIdAsync(id);
 
@@ -41,6 +42,24 @@ public class AccountController : ControllerBase
         {
             return NotFound();
         }
+
+        return Ok(account);
+    }
+
+    [HttpPost("deposit")]
+    public async Task<ActionResult<AccountDto>> Deposit(
+        DepositDto dto)
+    {
+        var account = await _accountService.DepositAsync(dto);
+
+        return Ok(account);
+    }
+
+    [HttpPost("withdraw")]
+    public async Task<ActionResult<AccountDto>> Withdraw(
+        WithdrawDto dto)
+    {
+        var account = await _accountService.WithdrawAsync(dto);
 
         return Ok(account);
     }

@@ -80,6 +80,98 @@ public class AccountService : IAccountService
             .FirstOrDefaultAsync();
     }
 
+    public async Task<AccountDto> DepositAsync(DepositDto dto)
+    {
+        var account = await _context.Accounts
+            .FirstOrDefaultAsync(a => a.Id == dto.AccountId);
+
+        if (account == null)
+        {
+            throw new ArgumentException("Account not found.");
+        }
+
+        if (dto.Amount <= 0)
+        {
+            throw new ArgumentException(
+                "Deposit amount must be greater than zero.");
+        }
+
+        account.Balance += dto.Amount;
+
+        var transaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            AccountId = account.Id,
+            Type = "Deposit",
+            Amount = dto.Amount,
+            Currency = account.Currency,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Transactions.Add(transaction);
+
+        await _context.SaveChangesAsync();
+
+        return new AccountDto
+        {
+            Id = account.Id,
+            CustomerId = account.CustomerId,
+            AccountNumber = account.AccountNumber,
+            Balance = account.Balance,
+            Currency = account.Currency,
+            CreatedAt = account.CreatedAt
+        };
+    }
+
+    public async Task<AccountDto> WithdrawAsync(WithdrawDto dto)
+    {
+        var account = await _context.Accounts
+            .FirstOrDefaultAsync(a => a.Id == dto.AccountId);
+
+        if (account == null)
+        {
+            throw new ArgumentException("Account not found.");
+        }
+
+        if (dto.Amount <= 0)
+        {
+            throw new ArgumentException(
+                "Withdrawal amount must be greater than zero.");
+        }
+
+        if (account.Balance < dto.Amount)
+        {
+            throw new InvalidOperationException(
+                "Insufficient balance.");
+        }
+
+        account.Balance -= dto.Amount;
+
+        var transaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            AccountId = account.Id,
+            Type = "Withdrawal",
+            Amount = dto.Amount,
+            Currency = account.Currency,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Transactions.Add(transaction);
+
+        await _context.SaveChangesAsync();
+
+        return new AccountDto
+        {
+            Id = account.Id,
+            CustomerId = account.CustomerId,
+            AccountNumber = account.AccountNumber,
+            Balance = account.Balance,
+            Currency = account.Currency,
+            CreatedAt = account.CreatedAt
+        };
+    }
+
     private string GenerateAccountNumber()
     {
         return $"JO-{Random.Shared.Next(100000, 999999)}";

@@ -9,4 +9,8 @@ public interface IAccountService
     Task<List<AccountDto>> GetAccountsAsync();
 
     Task<AccountDto?> GetAccountByIdAsync(Guid id);
+
+    Task<AccountDto> DepositAsync(DepositDto dto);
+
+    Task<AccountDto> WithdrawAsync(WithdrawDto dto);
 }
