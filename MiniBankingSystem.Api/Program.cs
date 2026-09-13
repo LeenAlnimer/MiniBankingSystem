@@ -15,6 +15,7 @@ builder.Services.AddScoped<IApplicationDbContext>(provider =>
     provider.GetRequiredService<BankingDbContext>());
 
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 
 // Add controllers
 builder.Services.AddControllers();
