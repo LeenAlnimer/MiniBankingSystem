@@ -53,7 +53,7 @@ namespace MiniBankingSystem.Infrastructure.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("Accounts");
+                    b.ToTable("Accounts", (string)null);
                 });
 
             modelBuilder.Entity("MiniBankingSystem.Domain.Entities.Customer", b =>
@@ -79,7 +79,7 @@ namespace MiniBankingSystem.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Customers");
+                    b.ToTable("Customers", (string)null);
                 });
 
             modelBuilder.Entity("MiniBankingSystem.Domain.Entities.Transaction", b =>
@@ -110,7 +110,7 @@ namespace MiniBankingSystem.Infrastructure.Migrations
 
                     b.HasIndex("AccountId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("MiniBankingSystem.Domain.Entities.Account", b =>

@@ -18,11 +18,15 @@ public class TransactionController : ControllerBase
 
     [HttpGet("account/{accountId}")]
     public async Task<ActionResult<List<TransactionDto>>> GetTransactionsByAccountId(
-        Guid accountId)
+        Guid accountId,
+        int pageNumber = 1,
+        int pageSize = 10)
     {
         var transactions =
             await _transactionService.GetTransactionsByAccountIdAsync(
-                accountId);
+                accountId,
+                pageNumber,
+                pageSize);
 
         return Ok(transactions);
     }

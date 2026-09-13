@@ -11,7 +11,7 @@ namespace MiniBankingSystem.Infrastructure.Data
     public class BankingDbContext : DbContext, IApplicationDbContext
 
     {
-        public  DbSet <Customer> Customers { get; set; }
+        public DbSet<Customer> Customers { get; set; }
         public DbSet<Account> Accounts { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public BankingDbContext(DbContextOptions<BankingDbContext> options)
@@ -66,5 +66,5 @@ namespace MiniBankingSystem.Infrastructure.Data
 
         }// EF core  configuration
     }
-    
+
 }

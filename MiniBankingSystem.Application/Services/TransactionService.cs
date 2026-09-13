@@ -14,7 +14,9 @@ public class TransactionService : ITransactionService
     }
 
     public async Task<List<TransactionDto>> GetTransactionsByAccountIdAsync(
-        Guid accountId)
+        Guid accountId,
+        int pageNumber,
+        int pageSize)
     {
         var accountExists = await _context.Accounts
             .AnyAsync(a => a.Id == accountId);
@@ -27,6 +29,8 @@ public class TransactionService : ITransactionService
         return await _context.Transactions
             .Where(t => t.AccountId == accountId)
             .OrderByDescending(t => t.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .Select(t => new TransactionDto
             {
                 Id = t.Id,
