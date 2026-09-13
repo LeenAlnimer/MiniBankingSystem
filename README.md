@@ -46,4 +46,4 @@ The system follows Clean Architecture with separated layers for:
 
 ## Project Status
 
-🚧 Currently under development.
+ Currently under development.
