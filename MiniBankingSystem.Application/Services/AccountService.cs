@@ -172,6 +172,80 @@ public class AccountService : IAccountService
         };
     }
 
+    public async Task TransferAsync(TransferDto dto)
+    {
+        var fromAccount = await _context.Accounts
+            .FirstOrDefaultAsync(a => a.Id == dto.FromAccountId);
+
+        if (fromAccount == null)
+        {
+            throw new ArgumentException(
+                "Source account not found.");
+        }
+
+        var toAccount = await _context.Accounts
+            .FirstOrDefaultAsync(a => a.Id == dto.ToAccountId);
+
+        if (toAccount == null)
+        {
+            throw new ArgumentException(
+                "Destination account not found.");
+        }
+
+        if (dto.FromAccountId == dto.ToAccountId)
+        {
+            throw new ArgumentException(
+                "Source and destination accounts must be different.");
+        }
+
+        if (dto.Amount <= 0)
+        {
+            throw new ArgumentException(
+                "Transfer amount must be greater than zero.");
+        }
+
+        if (fromAccount.Balance < dto.Amount)
+        {
+            throw new InvalidOperationException(
+                "Insufficient balance.");
+        }
+
+        if (fromAccount.Currency != toAccount.Currency)
+        {
+            throw new InvalidOperationException(
+                "Accounts must use the same currency.");
+        }
+
+        fromAccount.Balance -= dto.Amount;
+
+        toAccount.Balance += dto.Amount;
+
+        var withdrawalTransaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            AccountId = fromAccount.Id,
+            Type = "Transfer Out",
+            Amount = dto.Amount,
+            Currency = fromAccount.Currency,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var depositTransaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            AccountId = toAccount.Id,
+            Type = "Transfer In",
+            Amount = dto.Amount,
+            Currency = toAccount.Currency,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Transactions.Add(withdrawalTransaction);
+        _context.Transactions.Add(depositTransaction);
+
+        await _context.SaveChangesAsync();
+    }
+
     private string GenerateAccountNumber()
     {
         return $"JO-{Random.Shared.Next(100000, 999999)}";

@@ -13,4 +13,6 @@ public interface IAccountService
     Task<AccountDto> DepositAsync(DepositDto dto);
 
     Task<AccountDto> WithdrawAsync(WithdrawDto dto);
+
+    Task TransferAsync(TransferDto dto);
 }

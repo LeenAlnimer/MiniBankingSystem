@@ -63,4 +63,16 @@ public class AccountController : ControllerBase
 
         return Ok(account);
     }
+
+    [HttpPost("transfer")]
+    public async Task<IActionResult> Transfer(
+        TransferDto dto)
+    {
+        await _accountService.TransferAsync(dto);
+
+        return Ok(new
+        {
+            message = "Transfer completed successfully."
+        });
+    }
 }
