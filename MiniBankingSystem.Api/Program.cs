@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using MiniBankingSystem.Application.Interfaces;
 using MiniBankingSystem.Application.Services;
+using MiniBankingSystem.Infrastructure.Caching;
 using MiniBankingSystem.Infrastructure.Data;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<BankingDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register Redis
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect("localhost:6379"));
+
+// Register Redis Cache Service
+builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
 // Register Application dependencies
 builder.Services.AddScoped<IApplicationDbContext>(provider =>

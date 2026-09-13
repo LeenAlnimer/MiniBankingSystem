@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using MiniBankingSystem.Application.DTOs;
 using MiniBankingSystem.Application.Interfaces;
 using MiniBankingSystem.Domain.Entities;
@@ -8,10 +9,14 @@ namespace MiniBankingSystem.Application.Services;
 public class AccountService : IAccountService
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cacheService;
 
-    public AccountService(IApplicationDbContext context)
+    public AccountService(
+        IApplicationDbContext context,
+        ICacheService cacheService)
     {
         _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<AccountDto> CreateAccountAsync(CreateAccountDto dto)
@@ -66,7 +71,21 @@ public class AccountService : IAccountService
 
     public async Task<AccountDto?> GetAccountByIdAsync(Guid id)
     {
-        return await _context.Accounts
+        // Redis key
+        var cacheKey = $"account:{id}";
+
+        // 1. Try to get account from Redis
+        var cachedAccount = await _cacheService.GetAsync(cacheKey);
+
+        if (cachedAccount != null)
+        {
+            // Cache Hit
+            return JsonSerializer.Deserialize<AccountDto>(
+                cachedAccount);
+        }
+
+        // 2. Cache Miss → get account from PostgreSQL
+        var account = await _context.Accounts
             .Where(a => a.Id == id)
             .Select(a => new AccountDto
             {
@@ -78,6 +97,22 @@ public class AccountService : IAccountService
                 CreatedAt = a.CreatedAt
             })
             .FirstOrDefaultAsync();
+
+        if (account == null)
+        {
+            return null;
+        }
+
+        // 3. Serialize account to JSON
+        var accountJson = JsonSerializer.Serialize(account);
+
+        // 4. Save account in Redis for 5 minutes
+        await _cacheService.SetAsync(
+            cacheKey,
+            accountJson,
+            TimeSpan.FromMinutes(5));
+
+        return account;
     }
 
     public async Task<AccountDto> DepositAsync(DepositDto dto)
@@ -111,6 +146,10 @@ public class AccountService : IAccountService
         _context.Transactions.Add(transaction);
 
         await _context.SaveChangesAsync();
+
+        // Remove old cached account because balance changed
+        await _cacheService.RemoveAsync(
+            $"account:{account.Id}");
 
         return new AccountDto
         {
@@ -160,6 +199,10 @@ public class AccountService : IAccountService
         _context.Transactions.Add(transaction);
 
         await _context.SaveChangesAsync();
+
+        // Remove old cached account because balance changed
+        await _cacheService.RemoveAsync(
+            $"account:{account.Id}");
 
         return new AccountDto
         {
@@ -244,6 +287,13 @@ public class AccountService : IAccountService
         _context.Transactions.Add(depositTransaction);
 
         await _context.SaveChangesAsync();
+
+        // Remove old cached data for both accounts
+        await _cacheService.RemoveAsync(
+            $"account:{fromAccount.Id}");
+
+        await _cacheService.RemoveAsync(
+            $"account:{toAccount.Id}");
     }
 
     private string GenerateAccountNumber()
