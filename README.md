@@ -28,7 +28,7 @@ The system follows Clean Architecture with separated layers for:
 - Hangfire
 - Docker
 
-## Planned Features
+## Features
 
 - Customer management
 - Account management
