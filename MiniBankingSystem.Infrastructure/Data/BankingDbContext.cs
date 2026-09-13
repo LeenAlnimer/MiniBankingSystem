@@ -4,10 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using MiniBankingSystem.Application.Interfaces;
 using MiniBankingSystem.Domain.Entities;
 namespace MiniBankingSystem.Infrastructure.Data
 {
-    public class BankingDbContext : DbContext
+    public class BankingDbContext : DbContext, IApplicationDbContext
+
     {
         public  DbSet <Customer> Customers { get; set; }
         public DbSet<Account> Accounts { get; set; }

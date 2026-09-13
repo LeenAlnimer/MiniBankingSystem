@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using MiniBankingSystem.Application.Interfaces;
+using MiniBankingSystem.Application.Services;
 using MiniBankingSystem.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<BankingDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register Application dependencies
+builder.Services.AddScoped<IApplicationDbContext>(provider =>
+    provider.GetRequiredService<BankingDbContext>());
+
+builder.Services.AddScoped<ICustomerService, CustomerService>();
 
 // Add controllers
 builder.Services.AddControllers();

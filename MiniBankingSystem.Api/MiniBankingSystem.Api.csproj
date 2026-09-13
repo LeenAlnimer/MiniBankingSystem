@@ -16,10 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\MiniBankingSystem.Application\MiniBankingSystem.Application.csproj" />
     <ProjectReference Include="..\MiniBankingSystem.Infrastructure\MiniBankingSystem.Infrastructure.csproj" />
   </ItemGroup>
