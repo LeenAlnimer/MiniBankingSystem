@@ -1,0 +1,35 @@
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: minibanking-api
+    ports:
+      - "8080:8080"
+    networks:
+      - minibanking-network
+    depends_on:
+      - redis
+      - rabbitmq
+
+  redis:
+    image: redis
+    container_name: minibanking-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - minibanking-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: minibanking-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - minibanking-network
+
+networks:
+  minibanking-network:
+    driver: bridge

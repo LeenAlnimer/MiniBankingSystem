@@ -22,7 +22,8 @@ builder.Services.AddDbContext<BankingDbContext>(options =>
 
 // Register Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect("localhost:6379"));
+    ConnectionMultiplexer.Connect(
+        builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379"));
 
 // Register Redis Cache Service
 builder.Services.AddScoped<ICacheService, RedisCacheService>();

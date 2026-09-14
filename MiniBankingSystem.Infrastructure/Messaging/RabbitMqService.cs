@@ -12,7 +12,7 @@ public class RabbitMqService : IRabbitMqService
     {
         _factory = new ConnectionFactory
         {
-            HostName = "localhost",
+            HostName = "minibanking-rabbitmq",
             Port = 5672,
             UserName = "guest",
             Password = "guest"
