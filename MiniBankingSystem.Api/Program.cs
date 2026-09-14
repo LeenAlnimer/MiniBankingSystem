@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
+using MiniBankingSystem.Api.Middleware;
 using MiniBankingSystem.Application.Interfaces;
 using MiniBankingSystem.Application.Services;
 using MiniBankingSystem.Infrastructure.BackgroundJobs;
@@ -62,6 +63,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Global Exception Middleware
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseAuthorization();
 
