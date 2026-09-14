@@ -3,6 +3,7 @@ using MiniBankingSystem.Application.Interfaces;
 using MiniBankingSystem.Application.Services;
 using MiniBankingSystem.Infrastructure.Caching;
 using MiniBankingSystem.Infrastructure.Data;
+using MiniBankingSystem.Infrastructure.Messaging;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +19,12 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
 
 // Register Redis Cache Service
 builder.Services.AddScoped<ICacheService, RedisCacheService>();
+
+// Register RabbitMQ Producer
+builder.Services.AddScoped<IRabbitMqService, RabbitMqService>();
+
+// Register RabbitMQ Consumer
+builder.Services.AddHostedService<RabbitMqConsumer>();
 
 // Register Application dependencies
 builder.Services.AddScoped<IApplicationDbContext>(provider =>

@@ -9,10 +9,14 @@ namespace MiniBankingSystem.Api.Controllers;
 public class AccountController : ControllerBase
 {
     private readonly IAccountService _accountService;
+    private readonly IRabbitMqService _rabbitMqService;
 
-    public AccountController(IAccountService accountService)
+    public AccountController(
+        IAccountService accountService,
+        IRabbitMqService rabbitMqService)
     {
         _accountService = accountService;
+        _rabbitMqService = rabbitMqService;
     }
 
     [HttpPost]
@@ -73,6 +77,18 @@ public class AccountController : ControllerBase
         return Ok(new
         {
             message = "Transfer completed successfully."
+        });
+    }
+
+    [HttpPost("test-message")]
+    public async Task<IActionResult> TestMessage()
+    {
+        await _rabbitMqService.PublishAsync(
+            "Hello from MiniBankingSystem!");
+
+        return Ok(new
+        {
+            message = "Message sent to RabbitMQ successfully."
         });
     }
 }

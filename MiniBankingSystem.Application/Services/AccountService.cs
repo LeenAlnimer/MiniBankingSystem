@@ -10,13 +10,16 @@ public class AccountService : IAccountService
 {
     private readonly IApplicationDbContext _context;
     private readonly ICacheService _cacheService;
+    private readonly IRabbitMqService _rabbitMqService;
 
     public AccountService(
         IApplicationDbContext context,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IRabbitMqService rabbitMqService)
     {
         _context = context;
         _cacheService = cacheService;
+        _rabbitMqService = rabbitMqService;
     }
 
     public async Task<AccountDto> CreateAccountAsync(CreateAccountDto dto)
@@ -71,10 +74,9 @@ public class AccountService : IAccountService
 
     public async Task<AccountDto?> GetAccountByIdAsync(Guid id)
     {
-        // Redis key
         var cacheKey = $"account:{id}";
 
-        // 1. Try to get account from Redis
+        // Try Redis first
         var cachedAccount = await _cacheService.GetAsync(cacheKey);
 
         if (cachedAccount != null)
@@ -84,7 +86,7 @@ public class AccountService : IAccountService
                 cachedAccount);
         }
 
-        // 2. Cache Miss → get account from PostgreSQL
+        // Cache Miss → PostgreSQL
         var account = await _context.Accounts
             .Where(a => a.Id == id)
             .Select(a => new AccountDto
@@ -103,10 +105,9 @@ public class AccountService : IAccountService
             return null;
         }
 
-        // 3. Serialize account to JSON
+        // Store in Redis
         var accountJson = JsonSerializer.Serialize(account);
 
-        // 4. Save account in Redis for 5 minutes
         await _cacheService.SetAsync(
             cacheKey,
             accountJson,
@@ -147,9 +148,22 @@ public class AccountService : IAccountService
 
         await _context.SaveChangesAsync();
 
-        // Remove old cached account because balance changed
+        // Invalidate Redis cache
         await _cacheService.RemoveAsync(
             $"account:{account.Id}");
+
+        // Publish transaction event
+        var message = JsonSerializer.Serialize(new
+        {
+            TransactionId = transaction.Id,
+            AccountId = transaction.AccountId,
+            Type = transaction.Type,
+            Amount = transaction.Amount,
+            Currency = transaction.Currency,
+            CreatedAt = transaction.CreatedAt
+        });
+
+        await _rabbitMqService.PublishAsync(message);
 
         return new AccountDto
         {
@@ -200,9 +214,22 @@ public class AccountService : IAccountService
 
         await _context.SaveChangesAsync();
 
-        // Remove old cached account because balance changed
+        // Invalidate Redis cache
         await _cacheService.RemoveAsync(
             $"account:{account.Id}");
+
+        // Publish transaction event
+        var message = JsonSerializer.Serialize(new
+        {
+            TransactionId = transaction.Id,
+            AccountId = transaction.AccountId,
+            Type = transaction.Type,
+            Amount = transaction.Amount,
+            Currency = transaction.Currency,
+            CreatedAt = transaction.CreatedAt
+        });
+
+        await _rabbitMqService.PublishAsync(message);
 
         return new AccountDto
         {
@@ -260,7 +287,6 @@ public class AccountService : IAccountService
         }
 
         fromAccount.Balance -= dto.Amount;
-
         toAccount.Balance += dto.Amount;
 
         var withdrawalTransaction = new Transaction
@@ -288,12 +314,38 @@ public class AccountService : IAccountService
 
         await _context.SaveChangesAsync();
 
-        // Remove old cached data for both accounts
+        // Invalidate Redis cache for both accounts
         await _cacheService.RemoveAsync(
             $"account:{fromAccount.Id}");
 
         await _cacheService.RemoveAsync(
             $"account:{toAccount.Id}");
+
+        // Publish Transfer Out event
+        var withdrawalMessage = JsonSerializer.Serialize(new
+        {
+            TransactionId = withdrawalTransaction.Id,
+            AccountId = withdrawalTransaction.AccountId,
+            Type = withdrawalTransaction.Type,
+            Amount = withdrawalTransaction.Amount,
+            Currency = withdrawalTransaction.Currency,
+            CreatedAt = withdrawalTransaction.CreatedAt
+        });
+
+        await _rabbitMqService.PublishAsync(withdrawalMessage);
+
+        // Publish Transfer In event
+        var depositMessage = JsonSerializer.Serialize(new
+        {
+            TransactionId = depositTransaction.Id,
+            AccountId = depositTransaction.AccountId,
+            Type = depositTransaction.Type,
+            Amount = depositTransaction.Amount,
+            Currency = depositTransaction.Currency,
+            CreatedAt = depositTransaction.CreatedAt
+        });
+
+        await _rabbitMqService.PublishAsync(depositMessage);
     }
 
     private string GenerateAccountNumber()
