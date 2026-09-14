@@ -1,6 +1,9 @@
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using MiniBankingSystem.Application.Interfaces;
 using MiniBankingSystem.Application.Services;
+using MiniBankingSystem.Infrastructure.BackgroundJobs;
 using MiniBankingSystem.Infrastructure.Caching;
 using MiniBankingSystem.Infrastructure.Data;
 using MiniBankingSystem.Infrastructure.Messaging;
@@ -34,6 +37,14 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 
+// Register Hangfire
+builder.Services.AddHangfire(config =>
+    config.UsePostgreSqlStorage(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register Hangfire Server
+builder.Services.AddHangfireServer();
+
 // Add controllers
 builder.Services.AddControllers();
 
@@ -53,6 +64,15 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+// Hangfire Dashboard
+app.UseHangfireDashboard("/hangfire");
+
+// Register Recurring Job
+RecurringJob.AddOrUpdate<TransactionSummaryJob>(
+    "daily-transaction-summary",
+    job => job.RunAsync(),
+    Cron.Daily);
 
 app.MapControllers();
 
