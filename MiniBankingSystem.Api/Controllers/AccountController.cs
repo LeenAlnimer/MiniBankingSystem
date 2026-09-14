@@ -10,13 +10,16 @@ public class AccountController : ControllerBase
 {
     private readonly IAccountService _accountService;
     private readonly IRabbitMqService _rabbitMqService;
+    private readonly IExchangeRateService _exchangeRateService;
 
     public AccountController(
         IAccountService accountService,
-        IRabbitMqService rabbitMqService)
+        IRabbitMqService rabbitMqService,
+        IExchangeRateService exchangeRateService)
     {
         _accountService = accountService;
         _rabbitMqService = rabbitMqService;
+        _exchangeRateService = exchangeRateService;
     }
 
     [HttpPost]
@@ -77,6 +80,22 @@ public class AccountController : ControllerBase
         return Ok(new
         {
             message = "Transfer completed successfully."
+        });
+    }
+    [HttpGet("exchange-rate")]
+    public async Task<IActionResult> GetExchangeRate(
+    string fromCurrency,
+    string toCurrency)
+    {
+        var rate = await _exchangeRateService.GetExchangeRateAsync(
+            fromCurrency,
+            toCurrency);
+
+        return Ok(new
+        {
+            fromCurrency,
+            toCurrency,
+            rate
         });
     }
 

@@ -8,9 +8,12 @@ using MiniBankingSystem.Infrastructure.BackgroundJobs;
 using MiniBankingSystem.Infrastructure.Caching;
 using MiniBankingSystem.Infrastructure.Data;
 using MiniBankingSystem.Infrastructure.Messaging;
+using MiniBankingSystem.Infrastructure.ExternalServices;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpClient();
 
 // Register BankingDbContext and connect it to PostgreSQL
 builder.Services.AddDbContext<BankingDbContext>(options =>
@@ -38,6 +41,9 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 
+// Register External Exchange Rate Service
+builder.Services.AddScoped<IExchangeRateService, ExchangeRateService>();
+
 // Register Hangfire
 builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(
@@ -55,7 +61,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
