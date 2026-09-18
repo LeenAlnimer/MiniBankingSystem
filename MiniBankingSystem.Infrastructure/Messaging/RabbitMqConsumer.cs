@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
@@ -9,11 +10,14 @@ public class RabbitMqConsumer : BackgroundService
 {
     private readonly ConnectionFactory _factory;
 
-    public RabbitMqConsumer()
+    public RabbitMqConsumer(IConfiguration configuration)
     {
+        var rabbitMqHost =
+            configuration["RabbitMQ:Host"] ?? "localhost";
+
         _factory = new ConnectionFactory
         {
-            HostName = "minibanking-rabbitmq",
+            HostName = rabbitMqHost,
             Port = 5672,
             UserName = "guest",
             Password = "guest"

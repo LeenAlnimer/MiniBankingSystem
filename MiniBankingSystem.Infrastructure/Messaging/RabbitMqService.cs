@@ -1,4 +1,5 @@
-﻿using MiniBankingSystem.Application.Interfaces;
+﻿using Microsoft.Extensions.Configuration;
+using MiniBankingSystem.Application.Interfaces;
 using RabbitMQ.Client;
 using System.Text;
 
@@ -8,11 +9,14 @@ public class RabbitMqService : IRabbitMqService
 {
     private readonly ConnectionFactory _factory;
 
-    public RabbitMqService()
+    public RabbitMqService(IConfiguration configuration)
     {
+        var rabbitMqHost =
+            configuration["RabbitMQ:Host"] ?? "localhost";
+
         _factory = new ConnectionFactory
         {
-            HostName = "minibanking-rabbitmq",
+            HostName = rabbitMqHost,
             Port = 5672,
             UserName = "guest",
             Password = "guest"

@@ -1,89 +1,303 @@
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using MiniBankingSystem.Api.Middleware;
 using MiniBankingSystem.Application.Interfaces;
 using MiniBankingSystem.Application.Services;
 using MiniBankingSystem.Infrastructure.BackgroundJobs;
 using MiniBankingSystem.Infrastructure.Caching;
 using MiniBankingSystem.Infrastructure.Data;
-using MiniBankingSystem.Infrastructure.Messaging;
 using MiniBankingSystem.Infrastructure.ExternalServices;
+using MiniBankingSystem.Infrastructure.Messaging;
+using MiniBankingSystem.Infrastructure.Security;
 using StackExchange.Redis;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// Database Connection
+
+var databaseConnectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
+// When running from Visual Studio,
+// use localhost instead of the Docker hostname.
+if (builder.Environment.IsDevelopment())
+{
+    databaseConnectionString =
+        databaseConnectionString?
+            .Replace("host.docker.internal", "localhost");
+}
+
+
+// JWT Authentication
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer =
+                    builder.Configuration["Jwt:Issuer"],
+
+                ValidAudience =
+                    builder.Configuration["Jwt:Audience"],
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(
+                            builder.Configuration["Jwt:Key"]!))
+            };
+    });
+
+
+// HttpClient
+
 builder.Services.AddHttpClient();
 
-// Register BankingDbContext and connect it to PostgreSQL
-builder.Services.AddDbContext<BankingDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register Redis
+
+// Entity Framework Core / PostgreSQL
+
+builder.Services.AddDbContext<BankingDbContext>(options =>
+    options.UseNpgsql(databaseConnectionString));
+
+
+// Password Hashing
+
+builder.Services.AddScoped<
+    IPasswordHasher,
+    PasswordHasher>();
+
+
+// JWT Token Service
+
+builder.Services.AddScoped<
+    IJwtTokenService,
+    JwtTokenService>();
+
+
+// Redis
+
+var redisConnectionString =
+    builder.Configuration["Redis:ConnectionString"]
+    ?? "localhost:6379";
+
+if (builder.Environment.IsDevelopment())
+{
+    redisConnectionString =
+        redisConnectionString.Replace(
+            "minibanking-redis",
+            "localhost");
+}
+
 builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(
-        builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379"));
+        redisConnectionString));
 
-// Register Redis Cache Service
-builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
-// Register RabbitMQ Producer
-builder.Services.AddScoped<IRabbitMqService, RabbitMqService>();
+// Redis Cache Service
 
-// Register RabbitMQ Consumer
-builder.Services.AddHostedService<RabbitMqConsumer>();
+builder.Services.AddScoped<
+    ICacheService,
+    RedisCacheService>();
 
-// Register Application dependencies
-builder.Services.AddScoped<IApplicationDbContext>(provider =>
-    provider.GetRequiredService<BankingDbContext>());
 
-builder.Services.AddScoped<ICustomerService, CustomerService>();
-builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddScoped<ITransactionService, TransactionService>();
+// RabbitMQ Producer
 
-// Register External Exchange Rate Service
-builder.Services.AddScoped<IExchangeRateService, ExchangeRateService>();
+builder.Services.AddScoped<
+    IRabbitMqService,
+    RabbitMqService>();
 
-// Register Hangfire
+
+// RabbitMQ Consumer
+
+builder.Services.AddHostedService<
+    RabbitMqConsumer>();
+
+
+// Application DbContext
+
+builder.Services.AddScoped<IApplicationDbContext>(
+    provider =>
+        provider.GetRequiredService<
+            BankingDbContext>());
+
+
+// Application Services
+
+builder.Services.AddScoped<
+    ICustomerService,
+    CustomerService>();
+
+builder.Services.AddScoped<
+    IAccountService,
+    AccountService>();
+
+builder.Services.AddScoped<
+    ITransactionService,
+    TransactionService>();
+
+builder.Services.AddScoped<
+    IAuthService,
+    AuthService>();
+
+
+// External Exchange Rate Service
+
+builder.Services.AddScoped<
+    IExchangeRateService,
+    ExchangeRateService>();
+
+
+// Hangfire
+
+
 builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+        databaseConnectionString));
 
-// Register Hangfire Server
 builder.Services.AddHangfireServer();
 
-// Add controllers
+
+
+// Controllers
+
 builder.Services.AddControllers();
 
-// Add Swagger/OpenAPI
+
+
+// Swagger / OpenAPI
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    // JWT Bearer definition
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+
+            Type = SecuritySchemeType.Http,
+
+            Scheme = "bearer",
+
+            BearerFormat = "JWT",
+
+            In = ParameterLocation.Header,
+
+            Description =
+                "Enter your JWT token."
+        });
+
+
+    // Apply JWT security globally in Swagger
+    options.AddSecurityRequirement(
+        new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference =
+                        new OpenApiReference
+                        {
+                            Type =
+                                ReferenceType.SecurityScheme,
+
+                            Id = "Bearer"
+                        }
+                },
+
+                Array.Empty<string>()
+            }
+        });
+});
+
+
+// Build Application
 
 var app = builder.Build();
+
+
+
+// Swagger
+
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
+
     app.UseSwaggerUI();
 }
 
+
+// HTTPS
+
+
 app.UseHttpsRedirection();
 
+
+
 // Global Exception Middleware
-app.UseMiddleware<GlobalExceptionMiddleware>();
+
+
+app.UseMiddleware<
+    GlobalExceptionMiddleware>();
+
+
+
+// Authentication
+
+
+app.UseAuthentication();
+
+
+
+// Authorization
+
 
 app.UseAuthorization();
 
+
+
 // Hangfire Dashboard
+
+
 app.UseHangfireDashboard("/hangfire");
 
-// Register Recurring Job
+
+
+// Recurring Job
+
+
 RecurringJob.AddOrUpdate<TransactionSummaryJob>(
     "daily-transaction-summary",
     job => job.RunAsync(),
     Cron.Daily);
 
+
+
+// Map Controllers
+
+
 app.MapControllers();
+
+
+
+// Run Application
+
 
 app.Run();

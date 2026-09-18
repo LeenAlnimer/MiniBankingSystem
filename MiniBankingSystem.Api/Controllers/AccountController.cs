@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MiniBankingSystem.Application.DTOs;
 using MiniBankingSystem.Application.Interfaces;
 
@@ -6,6 +7,7 @@ namespace MiniBankingSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AccountController : ControllerBase
 {
     private readonly IAccountService _accountService;
@@ -82,10 +84,11 @@ public class AccountController : ControllerBase
             message = "Transfer completed successfully."
         });
     }
+
     [HttpGet("exchange-rate")]
     public async Task<IActionResult> GetExchangeRate(
-    string fromCurrency,
-    string toCurrency)
+        string fromCurrency,
+        string toCurrency)
     {
         var rate = await _exchangeRateService.GetExchangeRateAsync(
             fromCurrency,
