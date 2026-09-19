@@ -44,6 +44,4 @@ The system follows Clean Architecture with separated layers for:
 - Docker containerization
 - Unit and integration testing
 
-## Project Status
 
- Currently under development.
