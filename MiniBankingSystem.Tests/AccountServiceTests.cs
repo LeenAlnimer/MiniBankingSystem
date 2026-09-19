@@ -78,7 +78,6 @@ public class AccountServiceTests
             Times.Once);
     }
 
-
     [Fact]
     public async Task WithdrawAsync_ShouldThrowException_WhenBalanceIsInsufficient()
     {
@@ -148,6 +147,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task WithdrawAsync_ShouldThrowException_WhenAmountIsInvalid()
     {
@@ -219,6 +219,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task WithdrawAsync_ShouldThrowException_WhenAccountDoesNotExist()
     {
@@ -273,6 +274,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task DepositAsync_ShouldIncreaseAccountBalance()
     {
@@ -350,6 +352,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Once);
     }
+
     [Fact]
     public async Task DepositAsync_ShouldThrowException_WhenAmountIsInvalid()
     {
@@ -421,6 +424,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task DepositAsync_ShouldThrowException_WhenAccountDoesNotExist()
     {
@@ -475,6 +479,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task TransferAsync_ShouldTransferMoneySuccessfully()
     {
@@ -582,6 +587,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Exactly(2));
     }
+
     [Fact]
     public async Task TransferAsync_ShouldThrowException_WhenSourceAccountDoesNotExist()
     {
@@ -653,6 +659,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task TransferAsync_ShouldThrowException_WhenDestinationAccountDoesNotExist()
     {
@@ -726,6 +733,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task TransferAsync_ShouldThrowException_WhenSourceAndDestinationAreSame()
     {
@@ -798,6 +806,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task TransferAsync_ShouldThrowException_WhenBalanceIsInsufficient()
     {
@@ -886,6 +895,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task TransferAsync_ShouldThrowException_WhenCurrenciesAreDifferent()
     {
@@ -974,6 +984,7 @@ public class AccountServiceTests
             x => x.PublishAsync(It.IsAny<string>()),
             Times.Never);
     }
+
     [Fact]
     public async Task GetAccountByIdAsync_ShouldReturnAccountFromDatabase_WhenCacheMisses()
     {
@@ -1040,6 +1051,7 @@ public class AccountServiceTests
                 TimeSpan.FromMinutes(5)),
             Times.Once);
     }
+
     [Fact]
     public async Task GetAccountByIdAsync_ShouldReturnAccountFromCache_WhenCacheHit()
     {
@@ -1056,7 +1068,8 @@ public class AccountServiceTests
             CreatedAt = DateTime.UtcNow
         };
 
-        var cachedJson = System.Text.Json.JsonSerializer.Serialize(cachedAccount);
+        var cachedJson =
+            System.Text.Json.JsonSerializer.Serialize(cachedAccount);
 
         var contextMock = new Mock<IApplicationDbContext>();
 
@@ -1099,6 +1112,7 @@ public class AccountServiceTests
             x => x.Accounts,
             Times.Never);
     }
+
     [Fact]
     public async Task GetAccountByIdAsync_ShouldReturnNull_WhenAccountDoesNotExist()
     {
@@ -1147,17 +1161,4 @@ public class AccountServiceTests
                 It.IsAny<TimeSpan>()),
             Times.Never);
     }
-}
-
-
-public class TestDbContext : DbContext
-{
-    public TestDbContext(DbContextOptions<TestDbContext> options)
-        : base(options)
-    {
-    }
-
-    public DbSet<Account> Accounts { get; set; }
-
-    public DbSet<Transaction> Transactions { get; set; }
 }
