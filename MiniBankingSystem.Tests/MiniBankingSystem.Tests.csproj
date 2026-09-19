@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.31" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.31" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
@@ -19,8 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MiniBankingSystem.Api\MiniBankingSystem.Api.csproj" />
     <ProjectReference Include="..\MiniBankingSystem.Application\MiniBankingSystem.Application.csproj" />
     <ProjectReference Include="..\MiniBankingSystem.Domain\MiniBankingSystem.Domain.csproj" />
+    <ProjectReference Include="..\MiniBankingSystem.Infrastructure\MiniBankingSystem.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

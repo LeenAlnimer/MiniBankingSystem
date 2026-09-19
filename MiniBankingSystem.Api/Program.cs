@@ -18,23 +18,15 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-// Database Connection
-
 var databaseConnectionString =
     builder.Configuration.GetConnectionString("DefaultConnection");
 
-// When running from Visual Studio,
-// use localhost instead of the Docker hostname.
 if (builder.Environment.IsDevelopment())
 {
     databaseConnectionString =
         databaseConnectionString?
             .Replace("host.docker.internal", "localhost");
 }
-
-
-// JWT Authentication
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -61,81 +53,59 @@ builder.Services
             };
     });
 
-
-// HttpClient
-
 builder.Services.AddHttpClient();
 
-
-
-// Entity Framework Core / PostgreSQL
-
-builder.Services.AddDbContext<BankingDbContext>(options =>
-    options.UseNpgsql(databaseConnectionString));
-
-
-// Password Hashing
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<BankingDbContext>(options =>
+        options.UseNpgsql(databaseConnectionString));
+}
 
 builder.Services.AddScoped<
     IPasswordHasher,
     PasswordHasher>();
 
-
-// JWT Token Service
-
 builder.Services.AddScoped<
     IJwtTokenService,
     JwtTokenService>();
 
-
-// Redis
-
-var redisConnectionString =
-    builder.Configuration["Redis:ConnectionString"]
-    ?? "localhost:6379";
-
-if (builder.Environment.IsDevelopment())
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    redisConnectionString =
-        redisConnectionString.Replace(
-            "minibanking-redis",
-            "localhost");
+    var redisConnectionString =
+        builder.Configuration["Redis:ConnectionString"]
+        ?? "localhost:6379";
+
+    if (builder.Environment.IsDevelopment())
+    {
+        redisConnectionString =
+            redisConnectionString.Replace(
+                "minibanking-redis",
+                "localhost");
+    }
+
+    builder.Services.AddSingleton<IConnectionMultiplexer>(
+        ConnectionMultiplexer.Connect(
+            redisConnectionString));
+
+    builder.Services.AddScoped<
+        ICacheService,
+        RedisCacheService>();
 }
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect(
-        redisConnectionString));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddScoped<
+        IRabbitMqService,
+        RabbitMqService>();
 
-
-// Redis Cache Service
-
-builder.Services.AddScoped<
-    ICacheService,
-    RedisCacheService>();
-
-
-// RabbitMQ Producer
-
-builder.Services.AddScoped<
-    IRabbitMqService,
-    RabbitMqService>();
-
-
-// RabbitMQ Consumer
-
-builder.Services.AddHostedService<
-    RabbitMqConsumer>();
-
-
-// Application DbContext
+    builder.Services.AddHostedService<
+        RabbitMqConsumer>();
+}
 
 builder.Services.AddScoped<IApplicationDbContext>(
     provider =>
         provider.GetRequiredService<
             BankingDbContext>());
-
-
-// Application Services
 
 builder.Services.AddScoped<
     ICustomerService,
@@ -153,58 +123,37 @@ builder.Services.AddScoped<
     IAuthService,
     AuthService>();
 
-
-// External Exchange Rate Service
-
 builder.Services.AddScoped<
     IExchangeRateService,
     ExchangeRateService>();
 
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHangfire(config =>
+        config.UsePostgreSqlStorage(
+            databaseConnectionString));
 
-// Hangfire
-
-
-builder.Services.AddHangfire(config =>
-    config.UsePostgreSqlStorage(
-        databaseConnectionString));
-
-builder.Services.AddHangfireServer();
-
-
-
-// Controllers
+    builder.Services.AddHangfireServer();
+}
 
 builder.Services.AddControllers();
-
-
-
-// Swagger / OpenAPI
 
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    // JWT Bearer definition
     options.AddSecurityDefinition(
         "Bearer",
         new OpenApiSecurityScheme
         {
             Name = "Authorization",
-
             Type = SecuritySchemeType.Http,
-
             Scheme = "bearer",
-
             BearerFormat = "JWT",
-
             In = ParameterLocation.Header,
-
-            Description =
-                "Enter your JWT token."
+            Description = "Enter your JWT token."
         });
 
-
-    // Apply JWT security globally in Swagger
     options.AddSecurityRequirement(
         new OpenApiSecurityRequirement
         {
@@ -216,88 +165,45 @@ builder.Services.AddSwaggerGen(options =>
                         {
                             Type =
                                 ReferenceType.SecurityScheme,
-
                             Id = "Bearer"
                         }
                 },
-
                 Array.Empty<string>()
             }
         });
 });
 
-
-// Build Application
-
 var app = builder.Build();
-
-
-
-// Swagger
-
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-
     app.UseSwaggerUI();
 }
 
-
-// HTTPS
-
-
 app.UseHttpsRedirection();
-
-
-
-// Global Exception Middleware
-
 
 app.UseMiddleware<
     GlobalExceptionMiddleware>();
 
-
-
-// Authentication
-
-
 app.UseAuthentication();
-
-
-
-// Authorization
-
 
 app.UseAuthorization();
 
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHangfireDashboard("/hangfire");
 
-
-// Hangfire Dashboard
-
-
-app.UseHangfireDashboard("/hangfire");
-
-
-
-// Recurring Job
-
-
-RecurringJob.AddOrUpdate<TransactionSummaryJob>(
-    "daily-transaction-summary",
-    job => job.RunAsync(),
-    Cron.Daily);
-
-
-
-// Map Controllers
-
+    RecurringJob.AddOrUpdate<TransactionSummaryJob>(
+        "daily-transaction-summary",
+        job => job.RunAsync(),
+        Cron.Daily);
+}
 
 app.MapControllers();
 
-
-
-// Run Application
-
-
 app.Run();
+
+public partial class Program
+{
+}
